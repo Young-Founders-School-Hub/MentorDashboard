@@ -381,6 +381,8 @@ body {
 }
 .partner-stat.partners-bg { background: var(--blue-light); }
 .partner-stat.personal-bg { background: var(--gray-100); }
+.partner-stat:hover { opacity: 0.85; }
+.partner-stat.active-filter { outline: 2.5px solid var(--blue); outline-offset: -2px; }
 .partner-stat .stat-value {
   font-size: 28px;
   font-weight: 700;
@@ -703,12 +705,12 @@ tbody td {
     <div class="analytics-card">
       <h3>Partner Distribution</h3>
       <div class="partner-summary">
-        <div class="partner-stat partners-bg">
+        <div class="partner-stat partners-bg" onclick="clickPartnerType('__partners__')" style="cursor:pointer">
           <div class="stat-value" id="partnerCount">-</div>
           <div class="stat-label">Partners</div>
           <div class="stat-pct" id="partnerPct"></div>
         </div>
-        <div class="partner-stat personal-bg">
+        <div class="partner-stat personal-bg" onclick="clickPartnerType('__personal__')" style="cursor:pointer">
           <div class="stat-value" id="personalCount">-</div>
           <div class="stat-label">Personal</div>
           <div class="stat-pct" id="personalPct"></div>
@@ -826,7 +828,11 @@ function populateFilterOptions() {
   });
   const sortedDomains = Object.entries(domainCounts).sort((a,b) => a[0].localeCompare(b[0]));
   const partnerSelect = document.getElementById('filterPartner');
-  partnerSelect.innerHTML = '<option value="">All Partners</option>';
+  const personalCount = allData.filter(r => !r._isPartner).length;
+  partnerSelect.innerHTML = '<option value="">All</option>';
+  partnerSelect.innerHTML += `<option value="__partners__">All Partners</option>`;
+  partnerSelect.innerHTML += `<option value="__personal__">Personal / Gmail (${personalCount})</option>`;
+  partnerSelect.innerHTML += '<option disabled>──────────</option>';
   sortedDomains.forEach(([d, c]) => {
     partnerSelect.innerHTML += `<option value="${d}">${d} (${c})</option>`;
   });
@@ -935,6 +941,7 @@ function applyFilters() {
     // Partner
     if (state.partner) {
       if (state.partner === '__personal__') { if (r._isPartner) return false; }
+      else if (state.partner === '__partners__') { if (!r._isPartner) return false; }
       else if (r._domain !== state.partner) return false;
     }
     // Step
@@ -1052,6 +1059,12 @@ function renderPartnerDist() {
   document.getElementById('personalCount').textContent = personal;
   document.getElementById('partnerPct').textContent = `${((partners.length/total)*100).toFixed(1)}%`;
   document.getElementById('personalPct').textContent = `${((personal/total)*100).toFixed(1)}%`;
+
+  // Highlight active box
+  const partnersBox = document.getElementById('partnerCount').closest('.partner-stat');
+  const personalBox = document.getElementById('personalCount').closest('.partner-stat');
+  partnersBox.classList.toggle('active-filter', state.partner === '__partners__' || (state.partner && state.partner !== '__personal__'));
+  personalBox.classList.toggle('active-filter', state.partner === '__personal__');
 
   // Top partner domains
   const domainCounts = {};
@@ -1228,6 +1241,16 @@ function clickFunnelStep(stepVal) {
     sel.value = '';
   } else {
     sel.value = stepVal;
+  }
+  applyFilters();
+}
+
+function clickPartnerType(type) {
+  const sel = document.getElementById('filterPartner');
+  if (sel.value === type) {
+    sel.value = '';
+  } else {
+    sel.value = type;
   }
   applyFilters();
 }
